@@ -9,6 +9,9 @@ use super::{
 use core::{borrow::Borrow, cell::RefCell};
 use vm_core::{utils::group_vector_elements, Decorator, DecoratorList};
 
+#[cfg(feature = "std")]
+use std::time::Instant;
+
 mod instruction;
 
 mod module_provider;
@@ -200,6 +203,9 @@ impl Assembler {
         path: Option<&LibraryPath>,
         context: &mut AssemblyContext,
     ) -> Result<Vec<RpoDigest>, AssemblyError> {
+        #[cfg(feature = "std")]
+        let now = Instant::now();
+
         // a variable to track MAST roots of all procedures exported from this module
         let mut proc_roots = Vec::new();
         context.begin_module(path.unwrap_or(&LibraryPath::anon_path()), module)?;
@@ -264,10 +270,12 @@ impl Assembler {
             }
         }
 
-        // log the completion of the module
-        log::debug!(
-            "\n - Module \"{}\" has been compiled",
-            path.unwrap_or(&LibraryPath::anon_path())
+        // log the module compilation completion
+        #[cfg(feature = "std")]
+        log::trace!(
+            "\n- Compiled \"{}\" module in {} ms",
+            path.unwrap_or(&LibraryPath::anon_path()),
+            now.elapsed().as_millis()
         );
 
         Ok(proc_roots)

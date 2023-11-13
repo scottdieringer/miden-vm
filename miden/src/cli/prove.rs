@@ -61,9 +61,9 @@ impl ProveCmd {
     }
 
     pub fn execute(&self) -> Result<(), String> {
-        println!("============================================================");
-        println!("Prove program");
-        println!("============================================================");
+        log::info!("============================================================\n");
+        log::info!("Prove program\n");
+        log::info!("============================================================\n");
 
         // load libraries from files
         let libraries = Libraries::new(&self.library_paths)?;
@@ -76,7 +76,7 @@ impl ProveCmd {
         let input_data = InputFile::read(&self.input_file, &self.assembly_file)?;
 
         let program_hash: [u8; 32] = program.hash().into();
-        println!("Proving program with hash {}...", hex::encode(program_hash));
+        log::info!("Proving program with hash {}...\n", hex::encode(program_hash));
         let now = Instant::now();
 
         // fetch the stack and program inputs from the arguments
@@ -90,8 +90,8 @@ impl ProveCmd {
             prover::prove(&program, stack_inputs, host, proving_options)
                 .map_err(|err| format!("Failed to prove program - {:?}", err))?;
 
-        println!(
-            "Program with hash {} proved in {} ms",
+        log::info!(
+            "Program with hash {} proved in {} ms\n",
             hex::encode(program_hash),
             now.elapsed().as_millis()
         );
@@ -111,7 +111,7 @@ impl ProveCmd {
             OutputFile::write(&stack_outputs, &self.assembly_file.with_extension("outputs"))?;
 
             // print stack outputs to screen.
-            println!("Output: {:?}", stack);
+            log::info!("Output: {:?}\n", stack);
         }
 
         Ok(())

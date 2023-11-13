@@ -37,9 +37,9 @@ pub struct RunCmd {
 
 impl RunCmd {
     pub fn execute(&self) -> Result<(), String> {
-        println!("============================================================");
-        println!("Run program");
-        println!("============================================================");
+        log::info!("============================================================\n");
+        log::info!("Run program\n");
+        log::info!("============================================================\n");
 
         // load libraries from files
         let libraries = Libraries::new(&self.library_paths)?;
@@ -60,21 +60,21 @@ impl RunCmd {
         let host = DefaultHost::new(input_data.parse_advice_provider()?);
 
         let program_hash: [u8; 32] = program.hash().into();
-        print!("Executing program with hash {}... ", hex::encode(program_hash));
+        log::info!("Executing program with hash {}... ", hex::encode(program_hash));
         let now = Instant::now();
 
         // execute program and generate outputs
         let trace = processor::execute(&program, stack_inputs, host, execution_options)
             .map_err(|err| format!("Failed to generate execution trace = {:?}", err))?;
 
-        println!("done ({} ms)", now.elapsed().as_millis());
+        log::info!("done ({} ms)\n", now.elapsed().as_millis());
 
         if let Some(output_path) = &self.output_file {
             // write outputs to file if one was specified
             OutputFile::write(trace.stack_outputs(), output_path)?;
         } else {
             // write the stack outputs to the screen.
-            println!("Output: {:?}", trace.stack_outputs().stack_truncated(self.num_outputs));
+            log::info!("Output: {:?}\n", trace.stack_outputs().stack_truncated(self.num_outputs));
         }
 
         // calculate the percentage of padded rows
@@ -83,7 +83,7 @@ impl RunCmd {
             * 100
             / trace.trace_len_summary().padded_trace_len();
         // print the required cycles for each component
-        println!(
+        log::info!(
             "VM cycles: {} extended to {} steps ({}% padding).
 ├── Stack rows: {}
 ├── Range checker rows: {}
@@ -91,7 +91,7 @@ impl RunCmd {
     ├── Hash chiplet rows: {}
     ├── Bitwise chiplet rows: {}
     ├── Memory chiplet rows: {}
-    └── Kernel ROM rows: {}",
+    └── Kernel ROM rows: {}\n",
             trace.trace_len_summary().trace_len(),
             trace.trace_len_summary().padded_trace_len(),
             padding_percentage,

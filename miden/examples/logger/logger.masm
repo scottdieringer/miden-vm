@@ -1,0 +1,6 @@
+use.module::path::two
+use.bar::baz
+
+begin 
+    exec.two::foo
+end
