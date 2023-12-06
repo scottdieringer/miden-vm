@@ -2,7 +2,7 @@ use crate::system::ContextId;
 
 use super::{
     super::trace::LookupTableRow, get_num_groups_in_next_batch, BlockInfo, ColMatrix, Felt,
-    FieldElement, StarkField, Vec, Word, EMPTY_WORD, ONE, ZERO,
+    FieldElement, Vec, Word, EMPTY_WORD, ONE, ZERO,
 };
 
 // AUXILIARY TRACE HINTS
@@ -48,95 +48,6 @@ impl AuxTraceHints {
 
     // PUBLIC ACCESSORS
     // --------------------------------------------------------------------------------------------
-
-    /// Returns hints which describe how the block stack and block hash tables were updated during
-    /// program execution. Each hint consists of a clock cycle and the update description for that
-    /// cycle. The hints are sorted by clock cycle in ascending order.
-    pub fn block_exec_hints(&self) -> &[(u32, BlockTableUpdate)] {
-        &self.block_exec_hints
-    }
-
-    /// Returns a list of table rows which were added to and then removed from the block stack
-    /// table. We don't specify which cycles these rows were added/removed at because this info
-    /// can be inferred from execution hints.
-    ///
-    /// The rows are sorted by block_id in ascending order.
-    pub fn block_stack_table_rows(&self) -> &[BlockStackTableRow] {
-        &self.block_stack_rows
-    }
-
-    /// Returns a list of table rows which were added to and then removed from the block hash
-    /// table. We don't specify which cycles these rows were added/removed at because this info
-    /// can be inferred from execution hints.
-    ///
-    /// The rows are sorted first by `parent_id` in ascending order and then by `is_first_child`
-    /// with the entry where `is_first_child` = true coming first.
-    pub fn block_hash_table_rows(&self) -> &[BlockHashTableRow] {
-        &self.block_hash_rows
-    }
-
-    /// Returns hints which describe how the op group was updated during program execution. Each
-    /// hint consists of a clock cycle and the update description for that cycle.
-    pub fn op_group_table_hints(&self) -> &[(u32, OpGroupTableUpdate)] {
-        &self.op_group_hints
-    }
-
-    /// Returns a list of table rows which were added to and then removed from the op group table.
-    /// We don't specify which cycles these rows were added/removed at because this info can be
-    /// inferred from the op group table hints.
-    pub fn op_group_table_rows(&self) -> &[OpGroupTableRow] {
-        &self.op_group_rows
-    }
-
-    /// Returns an index of the row with the specified block_id in the list of block stack table
-    /// rows. Since the rows in the list are sorted by block_id, we can use binary search to find
-    /// the relevant row.
-    ///
-    /// If the row for the specified block_id is not found, None is returned.
-    pub fn get_block_stack_row_idx(&self, block_id: Felt) -> Option<usize> {
-        let block_id = block_id.as_int();
-        self.block_stack_rows
-            .binary_search_by_key(&block_id, |row| row.block_id.as_int())
-            .ok()
-    }
-
-    /// Returns an index of the row with the specified parent_id and is_first_child in the list of
-    /// block hash table rows. Since the rows in the list are sorted by parent_id, we can use
-    /// binary search to find the relevant row.
-    ///
-    /// If the row for the specified parent_id and is_first_child is not found, None is returned.
-    pub fn get_block_hash_row_idx(&self, parent_id: Felt, is_first_child: bool) -> Option<usize> {
-        let parent_id = parent_id.as_int();
-        match self
-            .block_hash_rows
-            .binary_search_by_key(&parent_id, |row| row.parent_id.as_int())
-        {
-            Ok(idx) => {
-                // check if the row for the found index is the right one; we need to do this
-                // because binary search may return an index for either of the two entries for
-                // the specified parent_id
-                if self.block_hash_rows[idx].is_first_child == is_first_child {
-                    Some(idx)
-                } else if is_first_child {
-                    // if we got here, it means that is_first_child for the row at the found index
-                    // is false. thus, the row with is_first_child = true should be right before it
-                    let row = &self.block_hash_rows[idx - 1];
-                    debug_assert_eq!(row.parent_id.as_int(), parent_id);
-                    debug_assert_eq!(row.is_first_child, is_first_child);
-                    Some(idx - 1)
-                } else {
-                    // similarly, if we got here, is_first_child for the row at the found index
-                    // must be true. thus, the row with is_first_child = false should be right
-                    // after it
-                    let row = &self.block_hash_rows[idx + 1];
-                    debug_assert_eq!(row.parent_id.as_int(), parent_id);
-                    debug_assert_eq!(row.is_first_child, is_first_child);
-                    Some(idx + 1)
-                }
-            }
-            Err(_) => None,
-        }
-    }
 
     // STATE MUTATORS
     // --------------------------------------------------------------------------------------------
@@ -316,27 +227,6 @@ impl BlockStackTableRow {
             parent_next_overflow_addr: ZERO,
         }
     }
-
-    #[cfg(test)]
-    /// Returns a new [BlockStackTableRow] corresponding to a CALL code block. This is used for
-    /// test purpose only.
-    pub fn new_test_with_ctx(
-        block_id: Felt,
-        parent_id: Felt,
-        is_loop: bool,
-        ctx_info: super::ExecutionContextInfo,
-    ) -> Self {
-        Self {
-            block_id,
-            parent_id,
-            is_loop,
-            parent_ctx: ctx_info.parent_ctx,
-            parent_fn_hash: ctx_info.parent_fn_hash,
-            parent_fmp: ctx_info.parent_fmp,
-            parent_stack_depth: ctx_info.parent_stack_depth,
-            parent_next_overflow_addr: ctx_info.parent_next_overflow_addr,
-        }
-    }
 }
 
 impl LookupTableRow for BlockStackTableRow {
@@ -414,14 +304,6 @@ impl BlockHashTableRow {
             is_first_child,
             is_loop_body,
         }
-    }
-
-    // PUBLIC ACCESSORS
-    // --------------------------------------------------------------------------------------------
-
-    /// Returns true if this table row is for a block which is the first child of a JOIN block.
-    pub fn is_first_child(&self) -> bool {
-        self.is_first_child
     }
 }
 

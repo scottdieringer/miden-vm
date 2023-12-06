@@ -22,7 +22,7 @@ mod block_stack;
 use block_stack::{BlockInfo, BlockStack, BlockType, ExecutionContextInfo};
 
 mod aux_hints;
-pub use aux_hints::{AuxTraceHints, BlockTableUpdate, OpGroupTableUpdate};
+pub use aux_hints::AuxTraceHints;
 #[cfg(test)]
 pub(crate) use aux_hints::{BlockHashTableRow, BlockStackTableRow, OpGroupTableRow};
 
