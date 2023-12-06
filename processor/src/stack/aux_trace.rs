@@ -16,9 +16,6 @@ use winter_prover::math::batch_inversion;
 /// Describes how to construct execution traces of stack-related auxiliary trace segment columns
 /// (used in multiset checks).
 pub struct AuxTraceBuilder {
-    /// A list of updates made to the overflow table during program execution. For each update we
-    /// also track the cycle at which the update happened.
-    pub(super) overflow_hints: Vec<(u64, OverflowTableUpdate)>,
     /// A list of all rows that were added to and then removed from the overflow table.
     pub(super) overflow_table_rows: Vec<OverflowTableRow>,
     /// The number of rows in the overflow table when execution begins.
@@ -59,7 +56,7 @@ impl AuxColumnBuilder<OverflowTableUpdate, OverflowTableRow, u64> for AuxTraceBu
     /// Internally, each update hint also contains an index of the row into the full list of rows
     /// which was either added or removed.
     fn get_table_hints(&self) -> &[(u64, OverflowTableUpdate)] {
-        &self.overflow_hints[self.num_init_rows..]
+        unimplemented!()
     }
 
     /// Returns the value by which the running product column should be multiplied for the provided
@@ -81,22 +78,8 @@ impl AuxColumnBuilder<OverflowTableUpdate, OverflowTableRow, u64> for AuxTraceBu
     }
 
     /// Returns the initial value in the auxiliary column.
-    fn init_column_value<E: FieldElement<BaseField = Felt>>(&self, row_values: &[E]) -> E {
-        let mut init_column_value = E::ONE;
-        // iterate through the elements in the initial table
-        for (_, hint) in &self.overflow_hints[..self.num_init_rows] {
-            // no rows should have been removed from the table before execution begins.
-            if let OverflowTableUpdate::RowInserted(row) = hint {
-                init_column_value *= row_values[*row as usize];
-            } else {
-                debug_assert!(
-                    false,
-                    "overflow table row incorrectly removed before execution started"
-                )
-            }
-        }
-
-        init_column_value
+    fn init_column_value<E: FieldElement<BaseField = Felt>>(&self, _row_values: &[E]) -> E {
+        unimplemented!()
     }
 
     /// Builds the execution trace of the decoder's `p1` column which describes the state of the block
