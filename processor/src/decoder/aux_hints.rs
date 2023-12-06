@@ -1,184 +1,12 @@
+use vm_core::FieldElement;
+use winter_prover::matrix::ColMatrix;
+
 use crate::system::ContextId;
 
 use super::{
-    super::trace::LookupTableRow, get_num_groups_in_next_batch, BlockInfo, ColMatrix, Felt,
-    FieldElement, Vec, Word, EMPTY_WORD, ONE, ZERO,
+    super::trace::LookupTableRow, Felt,
+    Word, ONE, ZERO,
 };
-
-// AUXILIARY TRACE HINTS
-// ================================================================================================
-
-/// Contains information which can be used to simplify construction of execution traces of
-/// decoder-related auxiliary trace segment columns (used in multiset checks).
-pub struct AuxTraceHints {
-    /// A list of updates made to the block stack and block hash tables. Each entry contains a
-    /// clock cycle at which the update was made, as well as the description of the update.
-    block_exec_hints: Vec<(u32, BlockTableUpdate)>,
-    /// A list of rows which were added and then removed from the block stack table. The rows are
-    /// sorted by `block_id` in ascending order.
-    block_stack_rows: Vec<BlockStackTableRow>,
-    /// A list of rows which were added and then removed from the block hash table. The rows are
-    /// sorted first by `parent_id` and then by `is_first_child` with the entry where
-    /// `is_first_child` = true coming first.
-    block_hash_rows: Vec<BlockHashTableRow>,
-    /// A list of updates made to the op group table where each entry is a tuple containing the
-    /// cycle at which the update was made and the update description.
-    op_group_hints: Vec<(u32, OpGroupTableUpdate)>,
-    /// A list of rows which were added to and then removed from the op group table.
-    op_group_rows: Vec<OpGroupTableRow>,
-}
-
-impl AuxTraceHints {
-    // CONSTRUCTOR
-    // --------------------------------------------------------------------------------------------
-    /// Returns an empty [AuxTraceHints] struct.
-    pub fn new() -> Self {
-        // initialize block hash table with an blank entry, this will be replaced with an entry
-        // containing the actual program hash at the end of trace generation
-        let block_hash_rows = vec![BlockHashTableRow::from_program_hash(EMPTY_WORD)];
-
-        Self {
-            block_exec_hints: Vec::new(),
-            block_stack_rows: Vec::new(),
-            block_hash_rows,
-            op_group_hints: Vec::new(),
-            op_group_rows: Vec::new(),
-        }
-    }
-
-    // PUBLIC ACCESSORS
-    // --------------------------------------------------------------------------------------------
-
-    // STATE MUTATORS
-    // --------------------------------------------------------------------------------------------
-
-    /// Specifies that a new code block started executing at the specified clock cycle. This also
-    /// records the relevant rows for both, block stack and block hash tables.
-    pub fn block_started(
-        &mut self,
-        clk: u32,
-        block_info: &BlockInfo,
-        child1_hash: Option<Word>,
-        child2_hash: Option<Word>,
-    ) {
-        // insert the hint with the relevant update
-        let hint = BlockTableUpdate::BlockStarted(block_info.num_children());
-        self.block_exec_hints.push((clk, hint));
-
-        // create a row which would be inserted into the block stack table
-        let bst_row = BlockStackTableRow::new(block_info);
-        self.block_stack_rows.push(bst_row);
-
-        // create rows for the block hash table. this may result in creation of 0, 1, or 2 rows:
-        // - no rows are created for SPAN blocks (both child hashes are None).
-        // - one row is created with is_first_child=false for SPLIT and LOOP blocks.
-        // - two rows are created for JOIN blocks with first row having is_first_child=true, and
-        //   the second row having is_first_child=false
-        if let Some(child1_hash) = child1_hash {
-            let is_first_child = child2_hash.is_some();
-            let bsh_row1 = BlockHashTableRow::from_parent(block_info, child1_hash, is_first_child);
-            self.block_hash_rows.push(bsh_row1);
-
-            if let Some(child2_hash) = child2_hash {
-                let bsh_row2 = BlockHashTableRow::from_parent(block_info, child2_hash, false);
-                self.block_hash_rows.push(bsh_row2);
-            }
-        }
-    }
-
-    /// Specifies that a code block execution was completed at the specified clock cycle. We also
-    /// need to specify whether the block was the first child of a JOIN block so that we can find
-    /// correct block hash table row.
-    pub fn block_ended(&mut self, clk: u32, is_first_child: bool) {
-        self.block_exec_hints.push((clk, BlockTableUpdate::BlockEnded(is_first_child)));
-    }
-
-    /// Specifies that another execution of a loop's body started at the specified clock cycle.
-    /// This is triggered by the REPEAT operation.
-    pub fn loop_repeat_started(&mut self, clk: u32) {
-        self.block_exec_hints.push((clk, BlockTableUpdate::LoopRepeated));
-    }
-
-    /// Specifies that execution of a SPAN block was extended at the specified clock cycle. This
-    /// is triggered by the RESPAN operation. This also adds a row for the new span batch to the
-    /// block stack table.
-    pub fn span_extended(&mut self, clk: u32, block_info: &BlockInfo) {
-        let row = BlockStackTableRow::new(block_info);
-        self.block_stack_rows.push(row);
-        self.block_exec_hints.push((clk, BlockTableUpdate::SpanExtended))
-    }
-
-    /// Specifies that an operation batch may have been inserted into the op group table at the
-    /// specified cycle. Operation groups are inserted into the table only if the number of groups
-    /// left is greater than 1.
-    pub fn insert_op_batch(&mut self, clk: u32, num_groups_left: Felt) {
-        // compute number of op groups in this batch
-        let num_batch_groups = get_num_groups_in_next_batch(num_groups_left);
-        debug_assert!(num_batch_groups > 0, "op batch is empty");
-
-        // the first op group in a batch is not added to the op_group table, so, we subtract 1 here
-        let num_inserted_groups = num_batch_groups - 1;
-
-        // if at least one group was inserted, mark the current clock cycle with the number of op
-        // groups added to the op group table
-        if num_inserted_groups > 0 {
-            let update = OpGroupTableUpdate::InsertRows(num_inserted_groups as u32);
-            self.op_group_hints.push((clk, update));
-        }
-    }
-
-    /// Specifies that an entry for an operation group was removed from the op group table at the
-    /// specified clock cycle.
-    pub fn remove_op_group(
-        &mut self,
-        clk: u32,
-        batch_id: Felt,
-        group_pos: Felt,
-        group_value: Felt,
-    ) {
-        self.op_group_hints.push((clk, OpGroupTableUpdate::RemoveRow));
-        // we record a row only when it is deleted because rows are added and deleted in the same
-        // order. thus, a sequence of deleted rows is exactly the same as the sequence of added
-        // rows.
-        self.op_group_rows.push(OpGroupTableRow::new(batch_id, group_pos, group_value));
-    }
-
-    /// Inserts the first entry into the block hash table.
-    pub fn set_program_hash(&mut self, program_hash: Word) {
-        self.block_hash_rows[0] = BlockHashTableRow::from_program_hash(program_hash);
-    }
-}
-
-impl Default for AuxTraceHints {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-// UPDATE HINTS
-// ================================================================================================
-
-/// Describes updates to both, block stack and block hash tables as follows:
-/// - `BlockStarted` and `BlockEnded` are relevant for both tables.
-/// - `SpanExtended` is relevant only for the block stack table.
-/// - `LoopRepeated` is relevant only for the block hash table.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum BlockTableUpdate {
-    BlockStarted(u32), // inner value contains the number of children for the block: 0, 1, or 2.
-    SpanExtended,
-    LoopRepeated,
-    BlockEnded(bool), // true indicates that the block was the first child of a JOIN block
-}
-
-/// Describes an update to the op group table. There could be two types of updates:
-/// - Some number of rows could be added to the table. In this case, the associated value specifies
-///   how many rows were added.
-/// - A single row could be removed from the table.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum OpGroupTableUpdate {
-    InsertRows(u32),
-    RemoveRow,
-}
 
 // BLOCK STACK TABLE ROW
 // ================================================================================================
@@ -197,31 +25,18 @@ pub struct BlockStackTableRow {
 }
 
 impl BlockStackTableRow {
-    /// Returns a new [BlockStackTableRow] instantiated from the specified block info.
-    pub fn new(block_info: &BlockInfo) -> Self {
-        let ctx_info = block_info.ctx_info.unwrap_or_default();
-        Self {
-            block_id: block_info.addr,
-            parent_id: block_info.parent_addr,
-            is_loop: block_info.is_entered_loop() == ONE,
-            parent_ctx: ctx_info.parent_ctx,
-            parent_fn_hash: ctx_info.parent_fn_hash,
-            parent_fmp: ctx_info.parent_fmp,
-            parent_stack_depth: ctx_info.parent_stack_depth,
-            parent_next_overflow_addr: ctx_info.parent_next_overflow_addr,
-        }
-    }
 
     /// Returns a new [BlockStackTableRow] instantiated with the specified parameters. This is
     /// used for test purpose only.
     #[cfg(test)]
     pub fn new_test(block_id: Felt, parent_id: Felt, is_loop: bool) -> Self {
+
         Self {
             block_id,
             parent_id,
             is_loop,
             parent_ctx: ContextId::root(),
-            parent_fn_hash: EMPTY_WORD,
+            parent_fn_hash: vm_core::EMPTY_WORD,
             parent_fmp: ZERO,
             parent_stack_depth: 0,
             parent_next_overflow_addr: ZERO,
@@ -269,29 +84,9 @@ pub struct BlockHashTableRow {
 impl BlockHashTableRow {
     // CONSTRUCTORS
     // --------------------------------------------------------------------------------------------
-    /// Returns a new [BlockHashTableRow] instantiated with the specified parameters.
-    pub fn from_parent(parent_info: &BlockInfo, block_hash: Word, is_first_child: bool) -> Self {
-        Self {
-            parent_id: parent_info.addr,
-            block_hash,
-            is_first_child,
-            is_loop_body: parent_info.is_entered_loop() == ONE,
-        }
-    }
-
-    /// Returns a new [BlockHashTableRow] containing the hash of the entire program.
-    pub fn from_program_hash(program_hash: Word) -> Self {
-        Self {
-            parent_id: ZERO,
-            block_hash: program_hash,
-            is_first_child: false,
-            is_loop_body: false,
-        }
-    }
-
+   
     /// Returns a new [BlockHashTableRow] instantiated with the specified parameters. This is
     /// used for test purpose only.
-    #[cfg(test)]
     pub fn new_test(
         parent_id: Felt,
         block_hash: Word,
