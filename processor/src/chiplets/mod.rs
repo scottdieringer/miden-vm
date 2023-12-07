@@ -1,14 +1,11 @@
 use crate::system::ContextId;
 
 use super::{
-    crypto::MerklePath, trace, utils, BTreeMap, ChipletsTrace, ColMatrix, ExecutionError, Felt,
+    crypto::MerklePath, utils, BTreeMap, ChipletsTrace, ColMatrix, ExecutionError, Felt,
     FieldElement, RangeChecker, StarkField, TraceFragment, Vec, Word, CHIPLETS_WIDTH, EMPTY_WORD,
     ONE, ZERO,
 };
-use miden_air::trace::chiplets::{
-    bitwise::{BITWISE_AND_LABEL, BITWISE_XOR_LABEL},
-    hasher::{Digest, HasherState},
-};
+use miden_air::trace::chiplets::hasher::{Digest, HasherState};
 use vm_core::{code_blocks::OpBatch, Kernel};
 
 mod bitwise;
@@ -26,10 +23,8 @@ mod kernel_rom;
 use kernel_rom::KernelRom;
 
 mod aux_trace;
-#[cfg(test)]
-pub(crate) use aux_trace::ChipletsVTableRow;
 
-pub(crate) use aux_trace::{AuxTraceBuilder, ChipletsVTableTraceBuilder};
+pub(crate) use aux_trace::AuxTraceBuilder;
 
 #[cfg(test)]
 mod tests;
@@ -212,9 +207,7 @@ impl Chiplets {
         path: &MerklePath,
         index: Felt,
     ) -> MerkleRootUpdate {
-        let merkle_root_update = self.hasher.update_merkle_root(old_value, new_value, path, index);
-
-        merkle_root_update
+        self.hasher.update_merkle_root(old_value, new_value, path, index)
     }
 
     // HASH CHIPLET ACCESSORS FOR CONTROL BLOCK DECODING
@@ -252,23 +245,6 @@ impl Chiplets {
         addr
     }
 
-    /// Sends a request for a [HasherLookup] required for verifying absorption of a new `SPAN` batch
-    /// to the Chiplets Bus. It's expected to be called by the decoder while processing a `RESPAN`.
-    ///
-    /// It's processed by moving the corresponding lookup from the Chiplets bus' queued lookups to
-    /// its requested lookups. Therefore, the next queued lookup is expected to be a precomputed
-    /// lookup for absorbing new elements into the hasher state.
-    pub fn absorb_span_batch(&mut self) {}
-
-    /// Sends a request for a control block hash result to the Chiplets Bus. It's expected to be
-    /// called by the decoder to request the finalization (return hash) of a control block hash
-    /// computation for the control block it has just finished decoding.
-    ///
-    /// It's processed by moving the corresponding lookup from the Chiplets bus' queued lookups to
-    /// its requested lookups. Therefore, the next queued lookup is expected to be a precomputed
-    /// lookup for returning a hash result.
-    pub fn read_hash_result(&mut self) {}
-
     // BITWISE CHIPLET ACCESSORS
     // --------------------------------------------------------------------------------------------
 
@@ -300,9 +276,7 @@ impl Chiplets {
     /// returned. This effectively implies that memory is initialized to ZERO.
     pub fn read_mem(&mut self, ctx: ContextId, addr: u32) -> Word {
         // read the word from memory
-        let value = self.memory.read(ctx, addr, self.clk);
-
-        value
+        self.memory.read(ctx, addr, self.clk)
     }
 
     /// Returns two words read from consecutive addresses started with `addr` in the specified
@@ -313,22 +287,16 @@ impl Chiplets {
     pub fn read_mem_double(&mut self, ctx: ContextId, addr: u32) -> [Word; 2] {
         // read two words from memory: from addr and from addr + 1
         let addr2 = addr + 1;
-        let words = [self.memory.read(ctx, addr, self.clk), self.memory.read(ctx, addr2, self.clk)];
-
-        words
+        [self.memory.read(ctx, addr, self.clk), self.memory.read(ctx, addr2, self.clk)]
     }
 
     /// Writes the provided word at the specified context/address.
-    ///
-    /// This also modifies the memory access trace and sends a memory lookup request to the bus.
     pub fn write_mem(&mut self, ctx: ContextId, addr: u32, word: Word) {
         self.memory.write(ctx, addr, self.clk, word);
     }
 
     /// Writes the provided element into the specified context/address leaving the remaining 3
     /// elements of the word previously stored at that address unchanged.
-    ///
-    /// This also modifies the memory access trace and sends a memory lookup request to the bus.
     pub fn write_mem_element(&mut self, ctx: ContextId, addr: u32, value: Felt) -> Word {
         let old_word = self.memory.get_old_value(ctx, addr);
         let new_word = [value, old_word[1], old_word[2], old_word[3]];
@@ -340,8 +308,6 @@ impl Chiplets {
 
     /// Writes the two provided words to two consecutive addresses in memory in the specified
     /// context, starting at the specified address.
-    ///
-    /// This also modifies the memory access trace and sends two memory lookup requests to the bus.
     pub fn write_mem_double(&mut self, ctx: ContextId, addr: u32, words: [Word; 2]) {
         let addr2 = addr + 1;
         // write two words to memory at addr and addr + 1
@@ -397,7 +363,7 @@ impl Chiplets {
     // --------------------------------------------------------------------------------------------
 
     /// Adds all range checks required by the memory chiplet to the provided [RangeChecker]
-    /// instance, along with the cycle rows at which the processor performs the lookups.
+    /// instance.
     pub fn append_range_checks(&self, range_checker: &mut RangeChecker) {
         self.memory.append_range_checks(self.memory_start(), range_checker);
     }
@@ -434,8 +400,7 @@ impl Chiplets {
     ///
     /// It returns the auxiliary trace builders for generating auxiliary trace columns that depend
     /// on data from [Chiplets].
-    fn fill_trace(self, trace: &mut [Vec<Felt>; CHIPLETS_WIDTH])
-    {
+    fn fill_trace(self, trace: &mut [Vec<Felt>; CHIPLETS_WIDTH]) {
         // get the rows where chiplets begin.
         let bitwise_start = self.bitwise_start();
         let memory_start = self.memory_start();
