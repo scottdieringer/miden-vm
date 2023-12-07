@@ -212,7 +212,6 @@ impl OverflowTable {
         AuxTraceBuilder {
             num_init_rows: self.num_init_rows,
             overflow_table_rows: self.all_rows,
-            final_rows: self.active_rows,
         }
     }
 
