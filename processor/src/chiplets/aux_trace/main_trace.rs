@@ -27,7 +27,8 @@ impl<'a> MainTrace<'a> {
         }
     }
 
-    // System columns
+    // SYSTEM COLUMNS
+    // --------------------------------------------------------------------------------------------
 
     pub fn clk(&self, i: usize) -> Felt {
         self.columns.get_column(CLK_COL_IDX)[i]
@@ -37,10 +38,16 @@ impl<'a> MainTrace<'a> {
         self.columns.get_column(CTX_COL_IDX)[i]
     }
 
-    // Decoder columns
+    // DECODER COLUMNS
+    // --------------------------------------------------------------------------------------------
 
     pub fn addr(&self, i: usize) -> Felt {
         self.columns.get_column(DECODER_TRACE_OFFSET)[i]
+    }
+
+    // Helper method to detect change of address.
+    pub fn is_addr_change(&self, i: usize) -> bool {
+        self.addr(i) != self.addr(i + 1)
     }
 
     pub fn helper_0(&self, i: usize) -> Felt {
@@ -82,7 +89,8 @@ impl<'a> MainTrace<'a> {
             + b6.mul_small(64)
     }
 
-    // Stack columns
+    // STACK COLUMNS
+    // --------------------------------------------------------------------------------------------
 
     pub fn s0(&self, i: usize) -> Felt {
         self.columns.get_column(STACK_TRACE_OFFSET)[i]
@@ -140,7 +148,8 @@ impl<'a> MainTrace<'a> {
         self.columns.get_column(STACK_TRACE_OFFSET + 13)[i]
     }
 
-    // Chiplets columns
+    // CHIPLETS COLUMNS
+    // --------------------------------------------------------------------------------------------
 
     pub fn chiplet_selector_0(&self, i: usize) -> Felt {
         self.columns.get_column(CHIPLETS_OFFSET)[i]
@@ -230,7 +239,9 @@ impl<'a> MainTrace<'a> {
     pub fn chiplet_kernel_root_3(&self, i: usize) -> Felt {
         self.columns.get_column(CHIPLETS_OFFSET + 9)[i]
     }
-    // Merkle path hashing selectors
+
+    //  MERKLE PATH HASHING SELECTORS
+    // --------------------------------------------------------------------------------------------
 
     pub fn f_mv(&self, i: usize) -> bool {
         (i % 8 == 0)
@@ -270,10 +281,5 @@ impl<'a> MainTrace<'a> {
             && self.chiplet_selector_1(i) == ONE
             && self.chiplet_selector_2(i) == ONE
             && self.chiplet_selector_3(i) == ZERO
-    }
-
-    // Helper method to detect change of address in the kernel ROM chiplet.
-    pub fn is_addr_change(&self, i: usize) -> bool {
-        self.addr(i) != self.addr(i + 1)
     }
 }

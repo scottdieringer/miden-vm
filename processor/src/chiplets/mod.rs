@@ -29,31 +29,6 @@ pub(crate) use aux_trace::AuxTraceBuilder;
 #[cfg(test)]
 mod tests;
 
-// HELPER STRUCTS
-// ================================================================================================
-
-/// Result of a merkle tree node update. The result contains the old merkle_root, which
-/// corresponding to the old_value, and the new merkle_root, for the updated value. As well as the
-/// row address of the execution trace at which the computation started.
-#[derive(Debug, Copy, Clone)]
-pub struct MerkleRootUpdate {
-    address: Felt,
-    old_root: Word,
-    new_root: Word,
-}
-
-impl MerkleRootUpdate {
-    pub fn get_address(&self) -> Felt {
-        self.address
-    }
-    pub fn get_old_root(&self) -> Word {
-        self.old_root
-    }
-    pub fn get_new_root(&self) -> Word {
-        self.new_root
-    }
-}
-
 // CHIPLETS MODULE OF HASHER, BITWISE, MEMORY, AND KERNEL ROM CHIPLETS
 // ================================================================================================
 
@@ -97,6 +72,47 @@ impl MerkleRootUpdate {
 /// exactly enough rows remaining for the specified number of random rows.
 /// - columns 0-3: selector columns with values set to ONE
 /// - columns 3-17: unused columns padded with ZERO
+///
+/// The following is pectorial representation of the chiplet module:
+///
+///             +---+-------------------------------------------------------+-------------+
+///             | 0 |                   |                                   |-------------|
+///             | . |  Hash chiplet     |       Hash chiplet                |-------------|
+///             | . |  internal         |       16 columns                  |-- Padding --|
+///             | . |  selectors        |       constraint degree 8         |-------------|
+///             | 0 |                   |                                   |-------------|
+///             +---+---+---------------------------------------------------+-------------+
+///             | 1 | 0 |               |                                   |-------------|
+///             | . | . |   Bitwise     |       Bitwise chiplet             |-------------|
+///             | . | . |   chiplet     |       13 columns                  |-- Padding --|
+///             | . | . |   internal    |       constraint degree 13        |-------------|
+///             | . | . |   selectors   |                                   |-------------|
+///             | . | 0 |               |                                   |-------------|
+///             | . +---+---+-----------------------------------------------+-------------+
+///             | . | 1 | 0 |                |                              |-------------|
+///             | . | . | . | Memory chiplet |      Memory chiplet          |-------------|
+///             | . | . | . | internal       |      12 columns              |-- Padding --|
+///             | . | . | . | selectors      |      constraint degree 9     |-------------|
+///             | . | . | 0 |                |                              |-------------|
+///             | . + . |---+---+-------------------------------------------+-------------+
+///             | . | . | 1 | 0 |                   |                       |-------------|
+///             | . | . | . | . |  Kernel ROM       |   Kernel ROM chiplet  |-------------|
+///             | . | . | . | . |  chiplet internal |   6 columns           |-- Padding --|
+///             | . | . | . | . |  selectors        |   constraint degree 9 |-------------|
+///             | . | . | . | 0 |                   |                       |-------------|
+///             | . + . | . |---+-------------------------------------------+-------------+
+///             | . | . | . | 1 |---------------------------------------------------------|
+///             | . | . | . | . |---------------------------------------------------------|
+///             | . | . | . | . |---------------------------------------------------------|
+///             | . | . | . | . |---------------------------------------------------------|
+///             | . | . | . | . |----------------------- Padding -------------------------|
+///             | . + . | . | . |---------------------------------------------------------|
+///             | . | . | . | . |---------------------------------------------------------|
+///             | . | . | . | . |---------------------------------------------------------|
+///             | . | . | . | . |---------------------------------------------------------|
+///             | 1 | 1 | 1 | 1 |---------------------------------------------------------|
+///             +---+---+---+---+---------------------------------------------------------+
+///
 pub struct Chiplets {
     /// Current clock cycle of the VM.
     clk: u32,
@@ -463,5 +479,30 @@ impl Chiplets {
         bitwise.fill_trace(&mut bitwise_fragment);
         memory.fill_trace(&mut memory_fragment);
         kernel_rom.fill_trace(&mut kernel_rom_fragment);
+    }
+}
+
+// HELPER STRUCTS
+// ================================================================================================
+
+/// Result of a Merkle tree node update. The result contains the old Merkle_root, which
+/// corresponding to the old_value, and the new merkle_root, for the updated value. As well as the
+/// row address of the execution trace at which the computation started.
+#[derive(Debug, Copy, Clone)]
+pub struct MerkleRootUpdate {
+    address: Felt,
+    old_root: Word,
+    new_root: Word,
+}
+
+impl MerkleRootUpdate {
+    pub fn get_address(&self) -> Felt {
+        self.address
+    }
+    pub fn get_old_root(&self) -> Word {
+        self.old_root
+    }
+    pub fn get_new_root(&self) -> Word {
+        self.new_root
     }
 }
