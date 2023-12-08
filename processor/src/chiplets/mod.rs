@@ -73,8 +73,7 @@ mod tests;
 /// - columns 0-3: selector columns with values set to ONE
 /// - columns 3-17: unused columns padded with ZERO
 ///
-/// The following is pectorial representation of the chiplet module:
-///
+/// The following is a pictorial representation of the chiplet module:
 ///             +---+-------------------------------------------------------+-------------+
 ///             | 0 |                   |                                   |-------------|
 ///             | . |  Hash chiplet     |       Hash chiplet                |-------------|
