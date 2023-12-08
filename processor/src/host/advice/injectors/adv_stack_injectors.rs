@@ -296,6 +296,107 @@ pub(crate) fn push_signature<S: ProcessState, A: AdviceProvider>(
     Ok(HostResponse::None)
 }
 
+/// Pushes the number of the leading zeros of the top stack element onto the advice stack.
+///
+/// Inputs:
+///   Operand stack: [n, ...]
+///   Advice stack: [...]
+///
+/// Outputs:
+///   Operand stack: [n, ...]
+///   Advice stack: [leading_zeros, ...]
+pub(crate) fn push_leading_zeros<S: ProcessState, A: AdviceProvider>(
+    advice_provider: &mut A,
+    process: &S,
+) -> Result<HostResponse, ExecutionError> {
+    let n = process.get_stack_item(0).as_int() as u32;
+    let leading_zeros = Felt::new(n.leading_zeros().into());
+    advice_provider.push_stack(AdviceSource::Value(leading_zeros))?;
+    Ok(HostResponse::None)
+}
+
+/// Pushes the number of the trailing zeros of the top stack element onto the advice stack.
+///
+/// Inputs:
+///   Operand stack: [n, ...]
+///   Advice stack: [...]
+///
+/// Outputs:
+///   Operand stack: [n, ...]
+///   Advice stack: [trailing_zeros, ...]
+pub(crate) fn push_trailing_zeros<S: ProcessState, A: AdviceProvider>(
+    advice_provider: &mut A,
+    process: &S,
+) -> Result<HostResponse, ExecutionError> {
+    let n = process.get_stack_item(0).as_int() as u32;
+    let trailing_zeros = Felt::new(n.trailing_zeros().into());
+    advice_provider.push_stack(AdviceSource::Value(trailing_zeros))?;
+    Ok(HostResponse::None)
+}
+
+/// Pushes the number of the leading ones of the top stack element onto the advice stack.
+///
+/// Inputs:
+///   Operand stack: [n, ...]
+///   Advice stack: [...]
+///
+/// Outputs:
+///   Operand stack: [n, ...]
+///   Advice stack: [leading_ones, ...]
+pub(crate) fn push_leading_ones<S: ProcessState, A: AdviceProvider>(
+    advice_provider: &mut A,
+    process: &S,
+) -> Result<HostResponse, ExecutionError> {
+    let n = process.get_stack_item(0).as_int() as u32;
+    let leading_ones = Felt::new(n.leading_ones().into());
+    advice_provider.push_stack(AdviceSource::Value(leading_ones))?;
+    Ok(HostResponse::None)
+}
+
+/// Pushes the number of the trailing ones of the top stack element onto the advice stack.
+///
+/// Inputs:
+///   Operand stack: [n, ...]
+///   Advice stack: [...]
+///
+/// Outputs:
+///   Operand stack: [n, ...]
+///   Advice stack: [trailing_ones, ...]
+pub(crate) fn push_trailing_ones<S: ProcessState, A: AdviceProvider>(
+    advice_provider: &mut A,
+    process: &S,
+) -> Result<HostResponse, ExecutionError> {
+    let n = process.get_stack_item(0).as_int() as u32;
+    let trailing_ones = Felt::new(n.trailing_ones().into());
+    advice_provider.push_stack(AdviceSource::Value(trailing_ones))?;
+    Ok(HostResponse::None)
+}
+
+/// Pushes the base 2 logarithm of the top stack element, rounded down.
+/// Inputs:
+///   Operand stack: [n, ...]
+///   Advice stack: [...]
+///
+/// Outputs:
+///   Operand stack: [n, ...]
+///   Advice stack: [ilog2(n), ...]
+///
+/// # Errors
+/// Returns an error if the logarithm argument (top stack element) equals ZERO.
+pub(crate) fn push_ilog2<S: ProcessState, A: AdviceProvider>(
+    advice_provider: &mut A,
+    process: &S,
+) -> Result<HostResponse, ExecutionError> {
+    let n = process.get_stack_item(0).as_int();
+    if n == 0 {
+        return Err(ExecutionError::LogArgumentZero(process.clk()));
+    }
+    let log_val = n.ilog2();
+    let ilog2 = Felt::new(log_val.into());
+    advice_provider.push_stack(AdviceSource::Value(ilog2))?;
+    Ok(HostResponse::None)
+}
+
 // HELPER FUNCTIONS
 // ================================================================================================
 

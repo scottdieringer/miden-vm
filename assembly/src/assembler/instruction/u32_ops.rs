@@ -5,6 +5,7 @@ use super::{
     SpanBuilder, ZERO,
 };
 use crate::{MAX_U32_ROTATE_VALUE, MAX_U32_SHIFT_VALUE};
+use vm_core::AdviceInjector::{Clo, Clz, Cto, Ctz};
 
 // ENUMS
 // ================================================================================================
@@ -167,6 +168,53 @@ pub fn u32divmod(
     handle_division(span, imm)
 }
 
+// ARITHMETIC OPERATIONS - HELPERS
+// ================================================================================================
+
+/// Handles U32ADD, U32SUB, and U32MUL operations in wrapping, and overflowing modes, including
+/// handling of immediate parameters.
+///
+/// Specifically handles these specific inputs per the spec.
+/// - Wrapping: does not check if the inputs are u32 values; overflow or underflow bits are
+///   discarded.
+/// - Overflowing: does not check if the inputs are u32 values; overflow or underflow bits are
+///   pushed onto the stack.
+fn handle_arithmetic_operation(
+    span: &mut SpanBuilder,
+    op: Operation,
+    op_mode: U32OpMode,
+    imm: Option<u32>,
+) -> Result<Option<CodeBlock>, AssemblyError> {
+    if let Some(imm) = imm {
+        push_u32_value(span, imm);
+    }
+
+    span.push_op(op);
+
+    // in the wrapping mode, drop high 32 bits
+    if matches!(op_mode, U32OpMode::Wrapping) {
+        span.add_op(Drop)
+    } else {
+        Ok(None)
+    }
+}
+
+/// Handles common parts of u32div, u32mod, and u32divmod operations, including handling of
+/// immediate parameters.
+fn handle_division(
+    span: &mut SpanBuilder,
+    imm: Option<u32>,
+) -> Result<Option<CodeBlock>, AssemblyError> {
+    if let Some(imm) = imm {
+        if imm == 0 {
+            return Err(AssemblyError::division_by_zero());
+        }
+        push_u32_value(span, imm);
+    }
+
+    span.add_op(U32div)
+}
+
 // BITWISE OPERATIONS
 // ================================================================================================
 
@@ -310,48 +358,54 @@ pub fn u32popcnt(span: &mut SpanBuilder) -> Result<Option<CodeBlock>, AssemblyEr
     span.add_ops(ops)
 }
 
-/// Handles U32ADD, U32SUB, and U32MUL operations in wrapping, and overflowing modes, including
-/// handling of immediate parameters.
+/// Translates `u32clz` assembly instruction to VM operations. `u32clz` counts the number of
+/// leading zeros of the value using non-deterministic technique (i.e. it takes help of advice
+/// provider).
 ///
-/// Specifically handles these specific inputs per the spec.
-/// - Wrapping: does not check if the inputs are u32 values; overflow or underflow bits are
-///   discarded.
-/// - Overflowing: does not check if the inputs are u32 values; overflow or underflow bits are
-///   pushed onto the stack.
-fn handle_arithmetic_operation(
-    span: &mut SpanBuilder,
-    op: Operation,
-    op_mode: U32OpMode,
-    imm: Option<u32>,
-) -> Result<Option<CodeBlock>, AssemblyError> {
-    if let Some(imm) = imm {
-        push_u32_value(span, imm);
-    }
+/// This operation takes 27 VM cycles.
+pub fn u32clz(span: &mut SpanBuilder) -> Result<Option<CodeBlock>, AssemblyError> {
+    span.push_advice_injector(Clz);
+    span.push_op(AdvPop); // [clz, n, ...]
 
-    span.push_op(op);
-
-    // in the wrapping mode, drop high 32 bits
-    if matches!(op_mode, U32OpMode::Wrapping) {
-        span.add_op(Drop)
-    } else {
-        Ok(None)
-    }
+    calculate_clz(span)
 }
 
-/// Handles common parts of u32div, u32mod, and u32divmod operations, including handling of
-/// immediate parameters.
-fn handle_division(
-    span: &mut SpanBuilder,
-    imm: Option<u32>,
-) -> Result<Option<CodeBlock>, AssemblyError> {
-    if let Some(imm) = imm {
-        if imm == 0 {
-            return Err(AssemblyError::division_by_zero());
-        }
-        push_u32_value(span, imm);
-    }
+/// Translates `u32ctz` assembly instruction to VM operations. `u32ctz` counts the number of
+/// trailing zeros of the value using non-deterministic technique (i.e. it takes help of advice
+/// provider).
+///
+/// This operation takes 27 VM cycles.
+pub fn u32ctz(span: &mut SpanBuilder) -> Result<Option<CodeBlock>, AssemblyError> {
+    span.push_advice_injector(Ctz);
+    span.push_op(AdvPop); // [ctz, n, ...]
 
-    span.add_op(U32div)
+    calculate_ctz(span)
+}
+
+/// Translates `u32clo` assembly instruction to VM operations. `u32clo` counts the number of
+/// leading ones of the value using non-deterministic technique (i.e. it takes help of advice
+/// provider).
+///
+/// This operation takes 32 VM cycles.
+pub fn u32clo(span: &mut SpanBuilder) -> Result<Option<CodeBlock>, AssemblyError> {
+    span.push_advice_injector(Clo);
+    span.push_op(AdvPop); // [clo, n, ...]
+    let ops = [Swap, Neg, Push(Felt::new(u32::MAX as u64)), Add, Swap];
+    span.push_ops(ops);
+    calculate_clz(span)
+}
+
+/// Translates `u32cto` assembly instruction to VM operations. `u32cto` counts the number of
+/// trailing ones of the value using non-deterministic technique (i.e. it takes help of advice
+/// provider).
+///
+/// This operation takes 32 VM cycles.
+pub fn u32cto(span: &mut SpanBuilder) -> Result<Option<CodeBlock>, AssemblyError> {
+    span.push_advice_injector(Cto);
+    span.push_op(AdvPop); // [cto, n, ...]
+    let ops = [Swap, Neg, Push(Felt::new(u32::MAX as u64)), Add, Swap];
+    span.push_ops(ops);
+    calculate_ctz(span)
 }
 
 // BITWISE OPERATIONS - HELPERS
@@ -377,6 +431,54 @@ fn prepare_bitwise<const MAX_VALUE: u8>(
         }
     }
     Ok(())
+}
+
+/// Appends relevant operations to the span block for the correctness check of the Clz instruction.
+///
+/// VM cycles: 26
+fn calculate_clz(span: &mut SpanBuilder) -> Result<Option<CodeBlock>, AssemblyError> {
+    // [clz, n, ...]
+    #[rustfmt::skip]
+    let ops_group_1 = [
+        Swap, Dup1, // [clz, n, clz, ...]
+    ];
+    span.push_ops(ops_group_1);
+
+    append_pow2_op(span); // [pow2(clz), n, clz, ...]
+
+    #[rustfmt::skip]
+    let ops_group_2 = [
+        Push(Felt::new(u32::MAX.into())), // [2^32 - 1, pow2(clz), n, clz, ...]
+        Swap, U32div, Drop, // [bit_mask, n, clz, ...]
+        Dup1, U32and, // [m, n, clz, ...] if calculation of clz is correct, m should be equal to n
+        Eq, Assert(ZERO) // [clz, ...]
+    ];
+
+    span.add_ops(ops_group_2)
+}
+
+/// Appends relevant operations to the span block for the correctness check of the Ctz instruction.
+///
+/// VM cycles: 26
+fn calculate_ctz(span: &mut SpanBuilder) -> Result<Option<CodeBlock>, AssemblyError> {
+    // [ctz, n, ...]
+    #[rustfmt::skip]
+    let ops_group_1 = [
+        Swap, Dup1, // [ctz, n, ctz, ...]
+    ];
+    span.push_ops(ops_group_1);
+
+    append_pow2_op(span); // [pow2(ctz), n, ctz, ...]
+
+    #[rustfmt::skip]
+    let ops_group_2 = [
+        Push(Felt::new(u32::MAX as u64 + 1)), // [2^32, pow2(ctz), n, ctz, ...]
+        Swap, Neg, Add, // [bit_mask, n, ctz]
+        Dup1, U32and, // [m, n, ctz, ...] if calculation of ctz is correct, m should be equal to n
+        Eq, Assert(ZERO) // [ctz, ...]
+    ];
+
+    span.add_ops(ops_group_2)
 }
 
 // COMPARISON OPERATIONS

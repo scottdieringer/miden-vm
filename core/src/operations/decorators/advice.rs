@@ -218,6 +218,60 @@ pub enum AdviceInjector {
     ///   Advice stack: [VALUE, ...]
     SmtPeek,
 
+    /// Pushes the number of the leading zeros of the top stack element onto the advice stack.
+    ///
+    /// Inputs:
+    ///   Operand stack: [n, ...]
+    ///   Advice stack: [...]
+    ///
+    /// Outputs:
+    ///   Operand stack: [n, ...]
+    ///   Advice stack: [leading_zeros, ...]
+    Clz,
+
+    /// Pushes the number of the trailing zeros of the top stack element onto the advice stack.
+    ///
+    /// Inputs:
+    ///   Operand stack: [n, ...]
+    ///   Advice stack: [...]
+    ///
+    /// Outputs:
+    ///   Operand stack: [n, ...]
+    ///   Advice stack: [trailing_zeros, ...]
+    Ctz,
+
+    /// Pushes the number of the leading ones of the top stack element onto the advice stack.
+    ///
+    /// Inputs:
+    ///   Operand stack: [n, ...]
+    ///   Advice stack: [...]
+    ///
+    /// Outputs:
+    ///   Operand stack: [n, ...]
+    ///   Advice stack: [leading_ones, ...]
+    Clo,
+
+    /// Pushes the number of the trailing ones of the top stack element onto the advice stack.
+    ///
+    /// Inputs:
+    ///   Operand stack: [n, ...]
+    ///   Advice stack: [...]
+    ///
+    /// Outputs:
+    ///   Operand stack: [n, ...]
+    ///   Advice stack: [trailing_ones, ...]
+    Cto,
+
+    /// Pushes the base 2 logarithm of the top stack element, rounded down.
+    /// Inputs:
+    ///   Operand stack: [n, ...]
+    ///   Advice stack: [...]
+    ///
+    /// Outputs:
+    ///   Operand stack: [n, ...]
+    ///   Advice stack: [ilog2(n), ...]
+    ILog2,
+
     // ADVICE MAP INJECTORS
     // --------------------------------------------------------------------------------------------
     /// Reads words from memory at the specified range and inserts them into the advice map under
@@ -304,6 +358,11 @@ impl fmt::Display for AdviceInjector {
             Self::SmtGet => write!(f, "smt_get"),
             Self::SmtSet => write!(f, "smt_set"),
             Self::SmtPeek => write!(f, "smt_peek"),
+            Self::Clz => write!(f, "u32clz"),
+            Self::Ctz => write!(f, "u32ctz"),
+            Self::Clo => write!(f, "u32clo"),
+            Self::Cto => write!(f, "u32cto"),
+            Self::ILog2 => write!(f, "ilog2"),
             Self::MemToMap => write!(f, "mem_to_map"),
             Self::HdwordToMap { domain } => write!(f, "hdword_to_map.{domain}"),
             Self::HpermToMap => write!(f, "hperm_to_map"),

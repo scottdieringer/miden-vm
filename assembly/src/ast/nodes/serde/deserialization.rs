@@ -81,6 +81,7 @@ impl Deserializable for Instruction {
             OpCode::Exp => Ok(Instruction::Exp),
             OpCode::ExpImm => Ok(Instruction::ExpImm(Felt::read_from(source)?)),
             OpCode::ExpBitLength => Ok(Instruction::ExpBitLength(source.read_u8()?)),
+            OpCode::ILog2 => Ok(Instruction::ILog2),
             OpCode::Not => Ok(Instruction::Not),
             OpCode::And => Ok(Instruction::And),
             OpCode::Or => Ok(Instruction::Or),
@@ -162,6 +163,10 @@ impl Deserializable for Instruction {
             OpCode::U32Gte => Ok(Instruction::U32Gte),
             OpCode::U32Min => Ok(Instruction::U32Min),
             OpCode::U32Max => Ok(Instruction::U32Max),
+            OpCode::U32Clz => Ok(Instruction::U32Clz),
+            OpCode::U32Ctz => Ok(Instruction::U32Ctz),
+            OpCode::U32Clo => Ok(Instruction::U32Clo),
+            OpCode::U32Cto => Ok(Instruction::U32Cto),
 
             // ----- stack manipulation -----------------------------------------------------------
             OpCode::Drop => Ok(Instruction::Drop),

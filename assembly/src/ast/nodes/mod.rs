@@ -64,6 +64,7 @@ pub enum Instruction {
     Exp,
     ExpImm(Felt),
     ExpBitLength(u8),
+    ILog2,
     Not,
     And,
     Or,
@@ -139,6 +140,10 @@ pub enum Instruction {
     U32Gte,
     U32Min,
     U32Max,
+    U32Clz,
+    U32Ctz,
+    U32Clo,
+    U32Cto,
 
     // ----- stack manipulation -------------------------------------------------------------------
     Drop,
@@ -322,6 +327,7 @@ impl fmt::Display for Instruction {
             Self::Exp => write!(f, "exp"),
             Self::ExpImm(value) => write!(f, "exp.{value}"),
             Self::ExpBitLength(value) => write!(f, "exp.u{value}"),
+            Self::ILog2 => write!(f, "ilog2"),
             Self::Not => write!(f, "not"),
             Self::And => write!(f, "and"),
             Self::Or => write!(f, "or"),
@@ -397,6 +403,10 @@ impl fmt::Display for Instruction {
             Self::U32Gte => write!(f, "u32gte"),
             Self::U32Min => write!(f, "u32min"),
             Self::U32Max => write!(f, "u32max"),
+            Self::U32Clz => write!(f, "u32clz"),
+            Self::U32Ctz => write!(f, "u32ctz"),
+            Self::U32Clo => write!(f, "u32clo"),
+            Self::U32Cto => write!(f, "u32cto"),
 
             // ----- stack manipulation ---------------------------------------------------------------
             Self::Drop => write!(f, "drop"),
