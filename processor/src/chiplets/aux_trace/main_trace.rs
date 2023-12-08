@@ -1,7 +1,5 @@
-use core::ops::Range;
-
 use super::{ColMatrix, Felt};
-
+use core::ops::Range;
 use miden_air::trace::{
     chiplets::{
         hasher::STATE_WIDTH, BITWISE_A_COL_IDX, BITWISE_B_COL_IDX, BITWISE_OUTPUT_COL_IDX,
@@ -11,10 +9,16 @@ use miden_air::trace::{
     decoder::{HASHER_STATE_OFFSET, NUM_HASHER_COLUMNS, USER_OP_HELPERS_OFFSET},
     CHIPLETS_OFFSET, CLK_COL_IDX, CTX_COL_IDX, DECODER_TRACE_OFFSET, STACK_TRACE_OFFSET,
 };
-
 use vm_core::{utils::range, ONE, ZERO};
+
+// CONSTANTS
+// ================================================================================================
+
 const DECODER_HASHER_RANGE: Range<usize> =
     range(DECODER_TRACE_OFFSET + HASHER_STATE_OFFSET, NUM_HASHER_COLUMNS);
+
+// HELPER STRUCT AND METHODS
+// ================================================================================================
 
 pub struct MainTrace<'a> {
     columns: &'a ColMatrix<Felt>,
