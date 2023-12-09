@@ -543,6 +543,10 @@ impl ParserContext<'_> {
             "u32rotl" => u32_ops::parse_u32_rotl(op),
 
             "u32popcnt" => simple_instruction(op, U32Popcnt),
+            "u32clz" => simple_instruction(op, U32Clz),
+            "u32ctz" => simple_instruction(op, U32Ctz),
+            "u32clo" => simple_instruction(op, U32Clo),
+            "u32cto" => simple_instruction(op, U32Cto),
 
             "u32lt" => simple_instruction(op, U32Lt),
             "u32lte" => simple_instruction(op, U32Lte),
@@ -552,11 +556,6 @@ impl ParserContext<'_> {
 
             "u32min" => simple_instruction(op, U32Min),
             "u32max" => simple_instruction(op, U32Max),
-
-            "u32clz" => simple_instruction(op, U32Clz),
-            "u32ctz" => simple_instruction(op, U32Ctz),
-            "u32clo" => simple_instruction(op, U32Clo),
-            "u32cto" => simple_instruction(op, U32Cto),
 
             // ----- stack manipulation -----------------------------------------------------------
             "drop" => simple_instruction(op, Drop),

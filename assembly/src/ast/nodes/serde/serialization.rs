@@ -229,16 +229,16 @@ impl Serializable for Instruction {
                 target.write_u8(*v);
             }
             Self::U32Popcnt => OpCode::U32Popcnt.write_into(target),
+            Self::U32Clz => OpCode::U32Clz.write_into(target),
+            Self::U32Ctz => OpCode::U32Ctz.write_into(target),
+            Self::U32Clo => OpCode::U32Clo.write_into(target),
+            Self::U32Cto => OpCode::U32Cto.write_into(target),
             Self::U32Lt => OpCode::U32Lt.write_into(target),
             Self::U32Lte => OpCode::U32Lte.write_into(target),
             Self::U32Gt => OpCode::U32Gt.write_into(target),
             Self::U32Gte => OpCode::U32Gte.write_into(target),
             Self::U32Min => OpCode::U32Min.write_into(target),
             Self::U32Max => OpCode::U32Max.write_into(target),
-            Self::U32Clz => OpCode::U32Clz.write_into(target),
-            Self::U32Ctz => OpCode::U32Ctz.write_into(target),
-            Self::U32Clo => OpCode::U32Clo.write_into(target),
-            Self::U32Cto => OpCode::U32Cto.write_into(target),
 
             // ----- stack manipulation ---------------------------------------------------------------
             Self::Drop => OpCode::Drop.write_into(target),

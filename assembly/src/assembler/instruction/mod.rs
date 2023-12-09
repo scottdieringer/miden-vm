@@ -152,6 +152,10 @@ impl Assembler {
             Instruction::U32Rotr => u32_ops::u32rotr(span, None),
             Instruction::U32RotrImm(v) => u32_ops::u32rotr(span, Some(*v)),
             Instruction::U32Popcnt => u32_ops::u32popcnt(span),
+            Instruction::U32Clz => u32_ops::u32clz(span),
+            Instruction::U32Ctz => u32_ops::u32ctz(span),
+            Instruction::U32Clo => u32_ops::u32clo(span),
+            Instruction::U32Cto => u32_ops::u32cto(span),
 
             Instruction::U32Lt => u32_ops::u32lt(span),
             Instruction::U32Lte => u32_ops::u32lte(span),
@@ -159,10 +163,6 @@ impl Assembler {
             Instruction::U32Gte => u32_ops::u32gte(span),
             Instruction::U32Min => u32_ops::u32min(span),
             Instruction::U32Max => u32_ops::u32max(span),
-            Instruction::U32Clz => u32_ops::u32clz(span),
-            Instruction::U32Ctz => u32_ops::u32ctz(span),
-            Instruction::U32Clo => u32_ops::u32clo(span),
-            Instruction::U32Cto => u32_ops::u32cto(span),
 
             // ----- stack manipulation -----------------------------------------------------------
             Instruction::Drop => span.add_op(Drop),
