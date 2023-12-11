@@ -604,3 +604,89 @@ export.rotr
     not
     cswap
 end
+
+#! Counts the number of leading zeros of one unsigned 64-bit integer.
+#! The input value is assumed to be represented using 32 bit limbs, but this is not checked.
+#! Stack transition looks as follows:
+#! [n_hi, n_lo, ...] -> [clz, ...], where clz is a number of leading zeros of value n.
+#! This takes 59 cycles if n < 2^32 and 32 cycles otherwise.
+export.clz
+    u32clz
+    dup.0
+    push.32
+    eq
+
+    if.true
+        swap
+        u32clz
+        add
+    else
+        swap
+        drop
+    end
+end
+
+#! Counts the number of trailing zeros of one unsigned 64-bit integer.
+#! The input value is assumed to be represented using 32 bit limbs, but this is not checked.
+#! Stack transition looks as follows:
+#! [n_hi, n_lo, ...] -> [ctz, ...], where ctz is a number of trailing zeros of value n.
+#! This takes 60 cycles if n < 2^32 and 33 cycles otherwise.
+export.ctz
+    swap
+    u32ctz
+    dup.0
+    push.32
+    eq
+
+    if.true 
+        swap
+        u32ctz
+        add
+    else
+        swap
+        drop
+    end
+end
+
+#! Counts the number of leading ones of one unsigned 64-bit integer.
+#! The input value is assumed to be represented using 32 bit limbs, but this is not checked.
+#! Stack transition looks as follows:
+#! [n_hi, n_lo, ...] -> [clo, ...], where clo is a number of leading ones of value n.
+#! This takes 69 cycles if n < 2^32 and 37 cycles otherwise.
+export.clo
+    u32clo
+    dup.0
+    push.32
+    eq
+
+    if.true
+        swap
+        u32clo
+        add
+    else
+        swap
+        drop
+    end
+end
+
+#! Counts the number of trailing ones of one unsigned 64-bit integer.
+#! The input value is assumed to be represented using 32 bit limbs, but this is not checked.
+#! Stack transition looks as follows:
+#! [n_hi, n_lo, ...] -> [cto, ...], where cto is a number of trailing ones of value n.
+#! This takes 70 cycles if n < 2^32 and 38 cycles otherwise.
+export.cto
+    swap
+    u32cto
+    dup.0
+    push.32
+    eq
+
+    if.true 
+        swap
+        u32cto
+        add
+    else
+        swap
+        drop
+    end
+end
