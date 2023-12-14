@@ -21,9 +21,9 @@ pub struct BundleCmd {
 
 impl BundleCmd {
     pub fn execute(&self) -> Result<(), String> {
-        log::info!("============================================================\n");
-        log::info!("Build library\n");
-        log::info!("============================================================\n");
+        println!("============================================================");
+        println!("Build library");
+        println!("============================================================");
 
         let namespace = match &self.namespace {
             Some(namespace) => namespace.to_string(),
@@ -50,7 +50,7 @@ impl BundleCmd {
         // write the masl output
         stdlib.write_to_dir(self.dir.clone()).map_err(|e| e.to_string())?;
 
-        log::info!("Built library {}\n", namespace);
+        println!("Built library {}", namespace);
 
         Ok(())
     }

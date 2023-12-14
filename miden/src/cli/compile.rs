@@ -19,9 +19,9 @@ pub struct CompileCmd {
 
 impl CompileCmd {
     pub fn execute(&self) -> Result<(), String> {
-        log::info!("============================================================\n");
-        log::info!("Compile program\n");
-        log::info!("============================================================\n");
+        println!("============================================================");
+        println!("Compile program");
+        println!("============================================================");
 
         // load the program from file and parse it
         let program = ProgramFile::read(&self.assembly_file)?;
@@ -34,7 +34,7 @@ impl CompileCmd {
 
         // report program hash to user
         let program_hash: [u8; 32] = compiled_program.hash().into();
-        log::info!("program hash is {}\n", hex::encode(program_hash));
+        println!("program hash is {}", hex::encode(program_hash));
 
         // write the compiled file
         program.write(self.output_file.clone())

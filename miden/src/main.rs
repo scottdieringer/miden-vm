@@ -55,14 +55,14 @@ pub fn main() {
     let cli = Cli::parse();
 
     // configure logging
-    // if logging level is not specified, set level to "warn"
+    // if logging level is not specified, set level to "info"
     if std::env::var("MIDEN_LOG").is_err() {
         std::env::set_var("MIDEN_LOG", "info");
     }
     // use "MIDEN_LOG" environment variable to change the logging level
     env_logger::Builder::from_env("MIDEN_LOG")
         .target(env_logger::Target::Stdout)
-        .format(|buf, record| write!(buf, "{}", record.args()))
+        .format(|buf, record| write!(buf, "{}\n", record.args()))
         .init();
 
     // execute cli action

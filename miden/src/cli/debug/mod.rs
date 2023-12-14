@@ -28,9 +28,9 @@ pub struct DebugCmd {
 
 impl DebugCmd {
     pub fn execute(&self) -> Result<(), String> {
-        log::info!("============================================================\n");
-        log::info!("Debug program\n");
-        log::info!("============================================================\n");
+        println!("============================================================");
+        println!("Debug program");
+        println!("============================================================");
 
         // load libraries from files
         let libraries = Libraries::new(&self.library_paths)?;
@@ -40,7 +40,7 @@ impl DebugCmd {
             ProgramFile::read(&self.assembly_file)?.compile(&Debug::On, libraries.libraries)?;
 
         let program_hash: [u8; 32] = program.hash().into();
-        log::info!("Debugging program with hash {}... \n", hex::encode(program_hash));
+        println!("Debugging program with hash {}...", hex::encode(program_hash));
 
         // load input data from file
         let input_data = InputFile::read(&self.input_file, &self.assembly_file)?;
@@ -63,14 +63,14 @@ impl DebugCmd {
         let mut rl =
             DefaultEditor::with_config(rl_config).expect("Readline couldn't be initialized");
 
-        log::info!("Welcome! Enter `h` for help.\n");
+        println!("Welcome! Enter `h` for help.");
 
         loop {
             match rl.readline(">> ") {
                 Ok(command) => match DebugCommand::parse(&command) {
                     Ok(Some(command)) => {
                         if !debug_executor.execute(command) {
-                            log::info!("Debugging complete\n");
+                            println!("Debugging complete");
                             break;
                         }
                     }

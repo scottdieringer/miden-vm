@@ -100,7 +100,7 @@ impl InputFile {
             None => program_path.with_extension("inputs"),
         };
 
-        log::info!("Reading input file `{}`\n", path.display());
+        log::info!("Reading input file `{}`", path.display());
 
         // read input file to string
         let inputs_file = fs::read_to_string(&path)
@@ -199,10 +199,7 @@ impl InputFile {
                     let tree = MerkleTree::new(leaves)
                         .map_err(|e| format!("failed to parse a Merkle tree: {e}"))?;
                     merkle_store.extend(tree.inner_nodes());
-                    log::trace!(
-                        "Added Merkle tree with root {} to the Merkle store\n",
-                        tree.root()
-                    );
+                    log::trace!("Added Merkle tree with root {} to the Merkle store", tree.root());
                 }
                 MerkleData::SparseMerkleTree(data) => {
                     let entries = Self::parse_sparse_merkle_tree(data)?;
@@ -210,7 +207,7 @@ impl InputFile {
                         .map_err(|e| format!("failed to parse a Sparse Merkle Tree: {e}"))?;
                     merkle_store.extend(tree.inner_nodes());
                     log::trace!(
-                        "Added Sparse Merkle tree with root {} to the Merkle store\n",
+                        "Added Sparse Merkle tree with root {} to the Merkle store",
                         tree.root()
                     );
                 }
@@ -220,7 +217,7 @@ impl InputFile {
                         .map_err(|e| format!("failed to parse a Partial Merkle Tree: {e}"))?;
                     merkle_store.extend(tree.inner_nodes());
                     log::trace!(
-                        "Added Partial Merkle tree with root {} to the Merkle store\n",
+                        "Added Partial Merkle tree with root {} to the Merkle store",
                         tree.root()
                     );
                 }
@@ -327,7 +324,7 @@ impl OutputFile {
             None => program_path.with_extension("outputs"),
         };
 
-        log::info!("Reading output file `{}`\n", path.display());
+        log::info!("Reading output file `{}`", path.display());
 
         // read outputs file to string
         let outputs_file = fs::read_to_string(&path)
@@ -343,13 +340,13 @@ impl OutputFile {
     /// Write the output file
     pub fn write(stack_outputs: &StackOutputs, path: &PathBuf) -> Result<(), String> {
         // if path provided, create output file
-        log::info!("Creating output file `{}`\n", path.display());
+        log::info!("Creating output file `{}`", path.display());
 
         let file = fs::File::create(&path).map_err(|err| {
             format!("Failed to create output file `{}` - {}", path.display(), err)
         })?;
 
-        log::info!("Writing data to output file\n");
+        log::info!("Writing data to output file");
 
         // write outputs to output file
         serde_json::to_writer_pretty(file, &Self::new(stack_outputs))
@@ -384,17 +381,18 @@ impl ProgramFile {
     /// Reads the masm file at the specified path and parses it into a [ProgramAst].
     pub fn read(path: &PathBuf) -> Result<Self, String> {
         // read program file to string
-        log::info!("Reading program file `{}`\n", path.display());
-        let source = fs::read_to_string(&path)
-            .map_err(|err| format!("Failed to open program file `{}` - {}", path.display(), err))?;
+        log::info!("Reading program file `{}`", path.display());
+        let source = fs::read_to_string(&path).map_err(|err| {
+            format!("Failed to open program file `{}` - {}\n", path.display(), err)
+        })?;
 
         // parse the program into an AST
-        log::info!("Parsing program... ");
+        log::info!("Parsing program...");
         let now = Instant::now();
         let ast = ProgramAst::parse(&source).map_err(|err| {
-            format!("Failed to parse program file `{}` - {}", path.display(), err)
+            format!("Failed to parse program file `{}` - {}\n", path.display(), err)
         })?;
-        log::info!("\ndone ({} ms)\n", now.elapsed().as_millis());
+        log::info!("Parsed the program in {} ms", now.elapsed().as_millis());
 
         Ok(Self {
             ast,
@@ -408,7 +406,7 @@ impl ProgramFile {
         I: IntoIterator<Item = L>,
         L: Library,
     {
-        log::info!("Compiling program... ");
+        log::info!("Compiling program...");
         let now = Instant::now();
 
         // compile program
@@ -425,7 +423,7 @@ impl ProgramFile {
             .compile_ast(&self.ast)
             .map_err(|err| format!("Failed to compile program - {}", err))?;
 
-        log::info!("\ndone ({} ms)\n", now.elapsed().as_millis());
+        log::info!("Compiled the program in {} ms", now.elapsed().as_millis());
 
         Ok(program)
     }
@@ -464,7 +462,7 @@ impl ProofFile {
             None => program_path.with_extension("proof"),
         };
 
-        log::info!("Reading proof file `{}`\n", path.display());
+        log::info!("Reading proof file `{}`", path.display());
 
         // read the file to bytes
         let file = fs::read(&path)
@@ -488,7 +486,7 @@ impl ProofFile {
             None => program_path.with_extension("proof"),
         };
 
-        log::info!("Creating proof file `{}`\n", path.display());
+        log::info!("Creating proof file `{}`", path.display());
 
         // create output fille
         let mut file = fs::File::create(&path)
@@ -496,7 +494,7 @@ impl ProofFile {
 
         let proof_bytes = proof.to_bytes();
 
-        log::info!("Writing data to proof file - size {} KB\n", proof_bytes.len() / 1024);
+        log::info!("Writing data to proof file - size {} KB", proof_bytes.len() / 1024);
 
         // write proof bytes to file
         file.write_all(&proof_bytes).unwrap();
@@ -544,7 +542,7 @@ impl Libraries {
         let mut libraries = Vec::new();
 
         for path in paths {
-            log::info!("Reading library file `{}`\n", path.as_ref().display());
+            log::info!("Reading library file `{}`", path.as_ref().display());
 
             let library = MaslLibrary::read_from_file(path)
                 .map_err(|e| format!("Failed to read library: {e}"))?;

@@ -22,9 +22,9 @@ pub struct VerifyCmd {
 
 impl VerifyCmd {
     pub fn execute(&self) -> Result<(), String> {
-        log::info!("============================================================\n");
-        log::info!("Verify program\n");
-        log::info!("============================================================\n");
+        println!("============================================================");
+        println!("Verify program");
+        println!("============================================================");
 
         // read program hash from input
         let program_hash = ProgramHash::read(&self.program_hash)?;
@@ -41,7 +41,7 @@ impl VerifyCmd {
         // load proof from file
         let proof = ProofFile::read(&Some(self.proof_file.clone()), &self.proof_file)?;
 
-        log::info!("verifying program...\n");
+        println!("verifying program...");
         let now = Instant::now();
 
         // TODO accept kernel as CLI argument
@@ -52,7 +52,7 @@ impl VerifyCmd {
         verifier::verify(program_info, stack_inputs, outputs_data.stack_outputs()?, proof)
             .map_err(|err| format!("Program failed verification! - {}", err))?;
 
-        log::info!("Verification complete in {} ms\n", now.elapsed().as_millis());
+        println!("Verification complete in {} ms", now.elapsed().as_millis());
 
         Ok(())
     }

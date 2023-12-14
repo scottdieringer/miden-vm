@@ -273,7 +273,7 @@ impl Assembler {
         // log the module compilation completion
         #[cfg(feature = "std")]
         log::trace!(
-            "\n- Compiled \"{}\" module in {} ms",
+            "- Compiled \"{}\" module in {} ms",
             path.unwrap_or(&LibraryPath::anon_path()),
             now.elapsed().as_millis()
         );
