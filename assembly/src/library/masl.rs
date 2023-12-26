@@ -1,7 +1,7 @@
 use super::{
-    super::BTreeSet, AstSerdeOptions, ByteReader, ByteWriter, Deserializable, DeserializationError,
-    Library, LibraryError, LibraryNamespace, LibraryPath, Module, ModuleAst, Serializable, Vec,
-    Version, MAX_DEPENDENCIES, MAX_MODULES,
+    super::ast::instrument, super::BTreeSet, AstSerdeOptions, ByteReader, ByteWriter,
+    Deserializable, DeserializationError, Library, LibraryError, LibraryNamespace, LibraryPath,
+    Module, ModuleAst, Serializable, Vec, Version, MAX_DEPENDENCIES, MAX_MODULES,
 };
 use core::slice::Iter;
 
@@ -184,6 +184,7 @@ mod use_std {
         }
 
         /// Read a library from a file.
+        #[instrument(name = "Reading library file", fields(path = %path.as_ref().display()))]
         pub fn read_from_file<P>(path: P) -> Result<MaslLibrary, LibraryError>
         where
             P: AsRef<Path>,

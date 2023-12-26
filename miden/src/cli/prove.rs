@@ -1,8 +1,10 @@
-use super::data::{Debug, InputFile, Libraries, OutputFile, ProgramFile, ProofFile};
+use super::data::{
+    event, instrument, Debug, InputFile, Libraries, OutputFile, ProgramFile, ProofFile,
+};
 use clap::Parser;
 use miden::ProvingOptions;
 use processor::{DefaultHost, ExecutionOptions, ExecutionOptionsError};
-use std::{path::PathBuf, time::Instant};
+use std::path::PathBuf;
 
 // TODO check if clap is supporting automatic generation of list values of hash function
 #[derive(Debug, Clone, Parser)]
@@ -60,11 +62,8 @@ impl ProveCmd {
         .with_execution_options(exec_options))
     }
 
+    #[instrument(" ===== Prove program =====", skip_all)]
     pub fn execute(&self) -> Result<(), String> {
-        println!("============================================================");
-        println!("Prove program");
-        println!("============================================================");
-
         // load libraries from files
         let libraries = Libraries::new(&self.library_paths)?;
 
@@ -74,10 +73,6 @@ impl ProveCmd {
 
         // load input data from file
         let input_data = InputFile::read(&self.input_file, &self.assembly_file)?;
-
-        let program_hash: [u8; 32] = program.hash().into();
-        println!("Proving program with hash {}...", hex::encode(program_hash));
-        let now = Instant::now();
 
         // fetch the stack and program inputs from the arguments
         let stack_inputs = input_data.parse_stack_inputs()?;
@@ -89,12 +84,6 @@ impl ProveCmd {
         let (stack_outputs, proof) =
             prover::prove(&program, stack_inputs, host, proving_options)
                 .map_err(|err| format!("Failed to prove program - {:?}", err))?;
-
-        println!(
-            "Program with hash {} proved in {} ms",
-            hex::encode(program_hash),
-            now.elapsed().as_millis()
-        );
 
         // write proof to file
         ProofFile::write(proof, &self.proof_file, &self.assembly_file)?;
@@ -110,8 +99,7 @@ impl ProveCmd {
             // write all outputs to default location if none was provided
             OutputFile::write(&stack_outputs, &self.assembly_file.with_extension("outputs"))?;
 
-            // print stack outputs to screen.
-            println!("Output: {:?}", stack);
+            event!(tracing::Level::INFO, "Output: {:?}", stack);
         }
 
         Ok(())

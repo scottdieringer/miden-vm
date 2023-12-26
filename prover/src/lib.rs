@@ -47,6 +47,7 @@ pub use winter_prover::StarkProof;
 ///
 /// # Errors
 /// Returns an error if program execution or STARK proof generation fails for any reason.
+#[tracing::instrument("Proving program", skip_all)]
 pub fn prove<H>(
     program: &Program,
     stack_inputs: StackInputs,

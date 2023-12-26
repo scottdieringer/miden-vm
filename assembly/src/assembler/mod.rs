@@ -1,5 +1,5 @@
 use super::{
-    ast::{Instruction, ModuleAst, Node, ProcedureAst, ProgramAst},
+    ast::{instrument, Instruction, ModuleAst, Node, ProcedureAst, ProgramAst},
     btree_map,
     crypto::hash::RpoDigest,
     AssemblyError, BTreeMap, CallSet, CodeBlock, CodeBlockTable, Felt, Kernel, Library,
@@ -8,9 +8,6 @@ use super::{
 };
 use core::{borrow::Borrow, cell::RefCell};
 use vm_core::{utils::group_vector_elements, Decorator, DecoratorList};
-
-#[cfg(feature = "std")]
-use std::time::Instant;
 
 mod instruction;
 
@@ -142,6 +139,7 @@ impl Assembler {
     ///
     /// # Errors
     /// Returns an error if the compilation of the specified program fails.
+    #[instrument("Compile AST", skip_all)]
     pub fn compile_ast(&self, program: &ProgramAst) -> Result<Program, AssemblyError> {
         // compile the program
         let mut context = AssemblyContext::for_program(Some(program));
@@ -197,15 +195,15 @@ impl Assembler {
     /// - If a module with the same path already exists in the module stack of the
     ///   [AssemblyContext].
     /// - If a lock to the [ProcedureCache] can not be attained.
+    #[instrument(level = "trace", 
+                 name = "Compiling module", 
+                 fields(module = path.unwrap_or(&LibraryPath::anon_path()).path()), skip_all)]
     pub fn compile_module(
         &self,
         module: &ModuleAst,
         path: Option<&LibraryPath>,
         context: &mut AssemblyContext,
     ) -> Result<Vec<RpoDigest>, AssemblyError> {
-        #[cfg(feature = "std")]
-        let now = Instant::now();
-
         // a variable to track MAST roots of all procedures exported from this module
         let mut proc_roots = Vec::new();
         context.begin_module(path.unwrap_or(&LibraryPath::anon_path()), module)?;
@@ -269,14 +267,6 @@ impl Assembler {
                     .insert(proc, proc_id)?;
             }
         }
-
-        // log the module compilation completion
-        #[cfg(feature = "std")]
-        log::trace!(
-            "- Compiled \"{}\" module in {} ms",
-            path.unwrap_or(&LibraryPath::anon_path()),
-            now.elapsed().as_millis()
-        );
 
         Ok(proc_roots)
     }

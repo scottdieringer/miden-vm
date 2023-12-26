@@ -2,6 +2,7 @@
 //!
 //! Structs in this module (specifically [ProgramAst] and [ModuleAst]) can be used to parse source
 //! code into relevant ASTs. This can be done via their `parse()` methods.
+pub use tracing::{event, info_span, instrument, Level};
 
 use super::{
     crypto::hash::RpoDigest, BTreeMap, ByteReader, ByteWriter, Deserializable,
@@ -101,7 +102,7 @@ fn check_unused_imports(import_info: &ModuleImports) {
 
     for lib in import_lib_paths {
         if !invoked_procs_paths.contains(&lib) {
-            log::warn!("warning: unused imports: \"{}\"", lib);
+            event!(Level::WARN, "warning: unused import: \"{}\"", lib);
         }
     }
 }

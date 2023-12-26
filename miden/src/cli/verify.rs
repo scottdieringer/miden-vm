@@ -1,7 +1,7 @@
-use super::data::{InputFile, OutputFile, ProgramHash, ProofFile};
+use super::data::{instrument, InputFile, OutputFile, ProgramHash, ProofFile};
 use clap::Parser;
 use miden::{Kernel, ProgramInfo};
-use std::{path::PathBuf, time::Instant};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Parser)]
 #[clap(about = "Verify a miden program")]
@@ -21,11 +21,8 @@ pub struct VerifyCmd {
 }
 
 impl VerifyCmd {
+    #[instrument(" ===== Verify program =====", skip_all)]
     pub fn execute(&self) -> Result<(), String> {
-        println!("============================================================");
-        println!("Verify program");
-        println!("============================================================");
-
         // read program hash from input
         let program_hash = ProgramHash::read(&self.program_hash)?;
 
@@ -41,9 +38,6 @@ impl VerifyCmd {
         // load proof from file
         let proof = ProofFile::read(&Some(self.proof_file.clone()), &self.proof_file)?;
 
-        println!("verifying program...");
-        let now = Instant::now();
-
         // TODO accept kernel as CLI argument
         let kernel = Kernel::default();
         let program_info = ProgramInfo::new(program_hash, kernel);
@@ -51,8 +45,6 @@ impl VerifyCmd {
         // verify proof
         verifier::verify(program_info, stack_inputs, outputs_data.stack_outputs()?, proof)
             .map_err(|err| format!("Program failed verification! - {}", err))?;
-
-        println!("Verification complete in {} ms", now.elapsed().as_millis());
 
         Ok(())
     }

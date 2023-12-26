@@ -1,7 +1,7 @@
-use super::data::{Debug, InputFile, Libraries, OutputFile, ProgramFile};
+use super::data::{event, instrument, Debug, InputFile, Libraries, OutputFile, ProgramFile};
 use clap::Parser;
 use processor::{DefaultHost, ExecutionOptions};
-use std::{path::PathBuf, time::Instant};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Parser)]
 #[clap(about = "Run a miden program")]
@@ -36,11 +36,8 @@ pub struct RunCmd {
 }
 
 impl RunCmd {
+    #[instrument(" ===== Run program =====", skip_all)]
     pub fn execute(&self) -> Result<(), String> {
-        println!("============================================================");
-        println!("Run program");
-        println!("============================================================");
-
         // load libraries from files
         let libraries = Libraries::new(&self.library_paths)?;
 
@@ -59,22 +56,20 @@ impl RunCmd {
         let stack_inputs = input_data.parse_stack_inputs()?;
         let host = DefaultHost::new(input_data.parse_advice_provider()?);
 
-        let program_hash: [u8; 32] = program.hash().into();
-        println!("Executing program with hash {}...", hex::encode(program_hash));
-        let now = Instant::now();
-
         // execute program and generate outputs
         let trace = processor::execute(&program, stack_inputs, host, execution_options)
             .map_err(|err| format!("Failed to generate execution trace = {:?}", err))?;
-
-        println!("Executed the program in {} ms", now.elapsed().as_millis());
 
         if let Some(output_path) = &self.output_file {
             // write outputs to file if one was specified
             OutputFile::write(trace.stack_outputs(), output_path)?;
         } else {
             // write the stack outputs to the screen.
-            println!("Output: {:?}", trace.stack_outputs().stack_truncated(self.num_outputs));
+            event!(
+                tracing::Level::INFO,
+                "Output: {:?}",
+                trace.stack_outputs().stack_truncated(self.num_outputs)
+            );
         }
 
         // calculate the percentage of padded rows
@@ -83,15 +78,16 @@ impl RunCmd {
             * 100
             / trace.trace_len_summary().padded_trace_len();
         // print the required cycles for each component
-        println!(
+        event!(
+            tracing::Level::INFO,
             "VM cycles: {} extended to {} steps ({}% padding).
-├── Stack rows: {}
-├── Range checker rows: {}
-└── Chiplets rows: {}
-    ├── Hash chiplet rows: {}
-    ├── Bitwise chiplet rows: {}
-    ├── Memory chiplet rows: {}
-    └── Kernel ROM rows: {}",
+                       ├── Stack rows: {}
+                       ├── Range checker rows: {}
+                       └── Chiplets rows: {}
+                           ├── Hash chiplet rows: {}
+                           ├── Bitwise chiplet rows: {}
+                           ├── Memory chiplet rows: {}
+                           └── Kernel ROM rows: {}",
             trace.trace_len_summary().trace_len(),
             trace.trace_len_summary().padded_trace_len(),
             padding_percentage,

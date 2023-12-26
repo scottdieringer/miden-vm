@@ -116,6 +116,8 @@ pub struct ChipletsTrace {
 
 /// Returns an execution trace resulting from executing the provided program against the provided
 /// inputs.
+#[tracing::instrument("Executing program", 
+    fields(hash = %hex::encode::<[u8; 32]>(program.hash().into())), skip_all)]
 pub fn execute<H>(
     program: &Program,
     stack_inputs: StackInputs,
